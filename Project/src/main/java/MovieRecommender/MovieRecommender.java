@@ -6,8 +6,8 @@ import org.neo4j.driver.GraphDatabase;
 import org.neo4j.driver.Record;
 import org.neo4j.driver.Result;
 import org.neo4j.driver.Session;
-import org.neo4j.driver.Transaction;
-import org.neo4j.driver.TransactionWork;
+//import org.neo4j.driver.Transaction;
+//import org.neo4j.driver.TransactionWork;
 
 import static org.neo4j.driver.Values.parameters;
 
@@ -45,19 +45,20 @@ public class MovieRecommender implements AutoCloseable
 */
 
     // Dispatches based on how the recommendation will be generated (type)
-    public void getRecs(String type, String text)
+    public List<Movie> getRecs(String type, int id)
     {
         if (type == "user") {
-            this.recsByUsers(text);
+            return this.recsByUsers(id);
         }
         else if (type == "movie") {
-            this.recsByMovies(text);
+            return this.recsByMovies(id);
         }
+        return null;
     }
 
     // Uses the Pearson Similarity function to quantify the users with the highest similarity to the given user 
     // in order to generate movie recommendations
-    private List<Movie> recsByUsers(String user)
+    private List<Movie> recsByUsers(int user)
     {
         try (Session session = driver.session())
         {
@@ -85,7 +86,7 @@ public class MovieRecommender implements AutoCloseable
                      
                     "RETURN m.title, SUM( pearson * toFloat(r.rating)) AS score" +
                     "ORDER BY score DESC LIMIT 25",
-                    parameters("uid", user));
+                    parameters("uid", Integer.toString(user)));
 
             List<Movie> recs = new ArrayList<Movie>();
 
@@ -93,17 +94,18 @@ public class MovieRecommender implements AutoCloseable
             while (result.hasNext())
             {
                 Record record = result.next();
-                Movie rec = new Movie(Integer.parseInt(record.get("movieId").asString()), record.get("title").asString());
+                Movie rec = new Movie(Integer.parseInt(record.get("movieId").asString()), 
+                        record.get("title").asString(), Float.parseFloat(record.get("score").asString()));
                 recs.add(rec);
                 // Values can be extracted from a record by index or name.
-                System.out.println(rec.getTitle() + ": " + record.get("score").asString());
+                //System.out.println(rec.getTitle() + ": " + record.get("score").asString());
             }
 
             return recs;
         }
     }
     // Uses the Cosine Similarity function to quantify the movies with the highest similarity to the given movie 
-    private List<Movie> recsByMovies(String movie)
+    private List<Movie> recsByMovies(int movie)
     {
         try (Session session = driver.session())
         {
@@ -115,24 +117,25 @@ public class MovieRecommender implements AutoCloseable
                            "p2.title AS to," +
                            "gds.alpha.similarity.cosine(p1Relevance, p2Relevance) AS similarity" + 
                     "ORDER BY similarity DESC",
-                    parameters("mid", movie));
+                    parameters("mid", Integer.toString(movie)));
 
             List<Movie> recs = new ArrayList<Movie>();
 
             while (result.hasNext())
             {
                 Record record = result.next();
-                Movie rec = new Movie(Integer.parseInt(record.get("movieId").asString()), record.get("title").asString());
+                Movie rec = new Movie(Integer.parseInt(record.get("movieId").asString()), 
+                        record.get("title").asString(), Float.parseFloat(record.get("similarity").asString()));
                 recs.add(rec);
-                System.out.println(rec.getTitle() + ": " + record.get("similarity").asString());
+                //System.out.println(rec.getTitle() + ": " + record.get("similarity").asString());
             }
 
             return recs;
         }
     }
 
-    // Find the given movie and return a Movie object
-    private void findMovie(String title)
+    // Find the movie by the given title and return a Movie object
+    private Movie findMovieByTitle(String title)
     {
         try (Session session = driver.session())
         {
@@ -142,14 +145,36 @@ public class MovieRecommender implements AutoCloseable
             if (result.hasNext())
             {
                 Record record = result.next();
-                Movie rec = new Movie(Integer.parseInt(record.get("movieId").asString()), record.get("title").asString());
-                System.out.println(rec.getTitle());
+                Movie rec = new Movie(Integer.parseInt(record.get("movieId").asString()), record.get("title").asString(), (float) 0.0);
+                //System.out.println(rec.getTitle());
+                return rec;
             }
+            return null;
         }
     }
 
-    // Find the given user and return a User object
-    private void findUser(String username)
+    // Find the movie by the given movieId and return a Movie object
+    private Movie findMovieById(int mid)
+    {
+        try (Session session = driver.session())
+        {
+            Result result = session.run("MATCH (m:Movie {title:$x}) RETURN m",
+                    parameters("x", Integer.toString(mid)));
+
+            if (result.hasNext())
+            {
+                Record record = result.next();
+                Movie rec = new Movie(Integer.parseInt(record.get("movieId").asString()), record.get("title").asString(), (float) 0.0);
+                //System.out.println(rec.getTitle());
+                return rec;
+            }
+            return null;
+        }
+    }
+
+    // Find the user with the given username and return a User object
+    // Do users have a username property? Or is it only uid?
+    private User findUserByName(String username)
     {
         try (Session session = driver.session())
         {
@@ -160,8 +185,29 @@ public class MovieRecommender implements AutoCloseable
             {
                 Record record = result.next();
                 User user = new User(Integer.parseInt(record.get("userId").asString()), record.get("username").asString());
-                System.out.println(user.getUsername());
+                //System.out.println(user.getUsername());
+                return user;
             }
+            return null;
+        }
+    }
+
+    // Find the user with the given userId and return a User object
+    private User findUserById(int uid)
+    {
+        try (Session session = driver.session())
+        {
+            Result result = session.run("MATCH (u:User {userId:$x}) RETURN u",
+                    parameters("x", Integer.toString(uid)));
+
+            if (result.hasNext())
+            {
+                Record record = result.next();
+                User user = new User(Integer.parseInt(record.get("userId").asString()), record.get("username").asString());
+                //System.out.println(user.getUserId());
+                return user;
+            }
+            return null;
         }
     }
 }

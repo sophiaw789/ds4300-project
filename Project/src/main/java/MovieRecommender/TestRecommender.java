@@ -1,5 +1,7 @@
 package MovieRecommender;
 
+import java.util.List;
+
 public class TestRecommender {
 
     // May have to change the localhost url
@@ -8,8 +10,15 @@ public class TestRecommender {
     {
         try 
         {
-            recommender.getRecs("user", "1" );
-            recommender.getRecs("movie", "1");
+            List<Movie> recsByUser = recommender.getRecs("user", 1);
+            for (Movie rec : recsByUser) {
+                System.out.println(rec.getTitle() + ": " + Float.toString(rec.getSimilarity()));
+            }
+
+            List<Movie> recsByMovie = recommender.getRecs("movie", 1);
+            for (Movie rec : recsByMovie) {
+                System.out.println(rec.getTitle() + ": " + Float.toString(rec.getSimilarity()));
+            }
         }
         finally {
             recommender.close();
