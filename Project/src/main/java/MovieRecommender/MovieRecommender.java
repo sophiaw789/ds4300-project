@@ -139,10 +139,11 @@ public class MovieRecommender implements AutoCloseable
             Result result = session.run("MATCH (m:Movie {title:$x}) RETURN m",
                     parameters("x", title));
 
-            while (result.hasNext())
+            if (result.hasNext())
             {
                 Record record = result.next();
-                System.out.println(record.get("title").asString());
+                Movie rec = new Movie(Integer.parseInt(record.get("movieId").asString()), record.get("title").asString());
+                System.out.println(rec.getTitle());
             }
         }
     }
@@ -155,10 +156,11 @@ public class MovieRecommender implements AutoCloseable
             Result result = session.run("MATCH (u:User {username:$x}) RETURN u",
                     parameters("x", username));
 
-            while (result.hasNext())
+            if (result.hasNext())
             {
                 Record record = result.next();
-                System.out.println(record.get("username").asString());
+                User user = new User(Integer.parseInt(record.get("userId").asString()), record.get("username").asString());
+                System.out.println(user.getUsername());
             }
         }
     }
