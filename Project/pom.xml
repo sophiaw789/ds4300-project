@@ -1,17 +1,22 @@
 <project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
-  xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/maven-v4_0_0.xsd">
+        xsi:schemaLocation="http://maven.apache.org/POM/4.0.0
+                     http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
   <groupId>MovieRecommender</groupId>
   <artifactId>Project</artifactId>
-  <packaging>jar</packaging>
-  <version>1.0-SNAPSHOT</version>
-  <name>Project</name>
-  <url>http://maven.apache.org</url>
-      <properties>
-        <maven.compiler.source>11</maven.compiler.source>
-        <maven.compiler.target>11</maven.compiler.target>
-        <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
-    </properties>
+ <version>1.0.0-SNAPSHOT</version>
+
+ <packaging>jar</packaging>
+ <name>Neo4j Procedure Template</name>
+ <description>A template project for building a Neo4j Procedure</description>
+
+ <properties>
+     <maven.compiler.source>11</maven.compiler.source>
+    <maven.compiler.target>11</maven.compiler.target>
+    <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+   <neo4j.version>4.3.1</neo4j.version>
+ </properties>
+
   <dependencies>
     <dependency>
       <groupId>junit</groupId>
@@ -25,4 +30,4 @@
       <version>4.3.2</version>
     </dependency>
   </dependencies>
-</project>
+  </project>

@@ -1,6 +1,9 @@
+package MovieRecommender;
+
 import org.neo4j.driver.AuthTokens;
 import org.neo4j.driver.Driver;
 import org.neo4j.driver.GraphDatabase;
+import org.neo4j.driver.Record;
 import org.neo4j.driver.Result;
 import org.neo4j.driver.Session;
 import org.neo4j.driver.Transaction;
@@ -28,7 +31,7 @@ public class MovieRecommender implements AutoCloseable
         try (Session session = driver.session())
         {
             // Use `session.writeTransaction` for writes and `session.readTransaction` for reading data.
-            session.writeTransaction(tx -> tx.run("MERGE (a:Person {name: $x})", parameters("x", name)));
+            session.writeTransaction(tx -> tx.run("MERGE (a:User {uid: $x})", parameters("x", uid)));
         }
     }
 
@@ -78,7 +81,7 @@ public class MovieRecommender implements AutoCloseable
         }
     }
 
-    public static void main( String... args ) throws Exception
+    public static void madin( String... args ) throws Exception
     {
         try ( MovieRecommender recommender = new MovieRecommender( "bolt://localhost:7687", "neo4j", "neo4j" ) )
         {
