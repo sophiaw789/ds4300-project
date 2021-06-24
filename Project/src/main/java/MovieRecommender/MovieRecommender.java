@@ -81,7 +81,7 @@ public class MovieRecommender implements AutoCloseable
         }
     }
 
-    public static void madin( String... args ) throws Exception
+    public static void main( String... args ) throws Exception
     {
         try ( MovieRecommender recommender = new MovieRecommender( "bolt://localhost:7687", "neo4j", "neo4j" ) )
         {
