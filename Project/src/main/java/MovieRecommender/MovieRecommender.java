@@ -45,7 +45,7 @@ public class MovieRecommender implements AutoCloseable
 */
 
     // Dispatches based on how the recommendation will be generated (type)
-    private void getRecs(String type, String text)
+    public void getRecs(String type, String text)
     {
         if (type == "user") {
             this.recsByUsers(text);
@@ -162,17 +162,6 @@ public class MovieRecommender implements AutoCloseable
                 User user = new User(Integer.parseInt(record.get("userId").asString()), record.get("username").asString());
                 System.out.println(user.getUsername());
             }
-        }
-    }
-
-    public static void main( String... args ) throws Exception
-    {
-        // May have to change the localhost url
-        try ( MovieRecommender recommender = new MovieRecommender( "bolt://localhost:7687", "neo4j", "neo4j" ) )
-        {
-            recommender.getRecs("user", "1" );
-            recommender.getRecs("movie", "1");
-            recommender.close();
         }
     }
 }
