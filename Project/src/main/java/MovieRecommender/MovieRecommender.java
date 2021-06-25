@@ -5,6 +5,7 @@ import org.neo4j.driver.Driver;
 import org.neo4j.driver.GraphDatabase;
 import org.neo4j.driver.Record;
 import org.neo4j.driver.Result;
+import org.neo4j.driver.Value;
 import org.neo4j.driver.Session;
 //import org.neo4j.driver.Transaction;
 //import org.neo4j.driver.TransactionWork;
@@ -52,7 +53,7 @@ public class MovieRecommender implements AutoCloseable
         }
         else if (type == "movie") {
             return this.recsByMovies(id);
-        }
+        } 
         return null;
     }
 
@@ -62,31 +63,31 @@ public class MovieRecommender implements AutoCloseable
     {
         try (Session session = driver.session())
         {
+            String query = "MATCH (u1:User {userId:$uid})-[r:RATED]->(m:Movie)" + 
+            " WITH u1, avg(toFloat(r.rating)) AS u1_mean" + 
+             
+            " MATCH (u1)-[r1:RATED]->(m:Movie)<-[r2:RATED]-(u2)" + 
+            " WITH u1, u1_mean, u2, COLLECT({r1: r1, r2: r2}) AS ratings WHERE size(ratings) > 10" + 
+             
+            "MATCH (u2)-[r:RATED]->(m:Movie)" + 
+            " WITH u1, u1_mean, u2, avg(toFLoat(r.rating)) AS u2_mean, ratings" + 
+             
+            " UNWIND ratings AS r" + 
+             
+            " WITH sum( (toFloat(r.r1.rating)-u1_mean) * (toFloat(r.r2.rating)-u2_mean) ) AS nom," +
+                 "sqrt( sum( (toFloat(r.r1.rating) - u1_mean)^2) * sum( (toFloat(r.r2.rating) - u2_mean) ^2)) AS denom," +
+                 "u1, u2 WHERE denom <> 0" +
+             
+            " WITH u1, u2, nom/denom AS pearson" +
+            " ORDER BY pearson DESC LIMIT 10" +
+             
+            " MATCH (u2)-[r:RATED]->(m:Movie) WHERE NOT EXISTS( (u1)-[:RATED]->(m) )" +
+             
+            " RETURN m, SUM( pearson * toFloat(r.rating)) AS score" +
+            " ORDER BY score DESC LIMIT 25";
+
             // The `session.run` method will run the specified Query.
-            Result result = session.run(
-                    "MATCH (u1:User {userId:$uid})-[r:RATED]->(m:Movie)" + 
-                    "WITH u1, avg(toFloat(r.rating)) AS u1_mean" + 
-                     
-                    "MATCH (u1)-[r1:RATED]->(m:Movie)<-[r2:RATED]-(u2)" + 
-                    "WITH u1, u1_mean, u2, COLLECT({r1: r1, r2: r2}) AS ratings WHERE size(ratings) > 10" + 
-                     
-                    "MATCH (u2)-[r:RATED]->(m:Movie)" + 
-                    "WITH u1, u1_mean, u2, avg(toFLoat(r.rating)) AS u2_mean, ratings" + 
-                     
-                    "UNWIND ratings AS r" + 
-                     
-                    "WITH sum( (toFloat(r.r1.rating)-u1_mean) * (toFloat(r.r2.rating)-u2_mean) ) AS nom," +
-                         "sqrt( sum( (toFloat(r.r1.rating) - u1_mean)^2) * sum( (toFloat(r.r2.rating) - u2_mean) ^2)) AS denom," +
-                         "u1, u2 WHERE denom <> 0" +
-                     
-                    "WITH u1, u2, nom/denom AS pearson" +
-                    "ORDER BY pearson DESC LIMIT 10" +
-                     
-                    "MATCH (u2)-[r:RATED]->(m:Movie) WHERE NOT EXISTS( (u1)-[:RATED]->(m) )" +
-                     
-                    "RETURN m.title, SUM( pearson * toFloat(r.rating)) AS score" +
-                    "ORDER BY score DESC LIMIT 25",
-                    parameters("uid", Integer.toString(user)));
+            Result result = session.run(query, parameters("uid", Integer.toString(user)));
 
             List<Movie> recs = new ArrayList<Movie>();
 
@@ -94,8 +95,9 @@ public class MovieRecommender implements AutoCloseable
             while (result.hasNext())
             {
                 Record record = result.next();
-                Movie rec = new Movie(Integer.parseInt(record.get("movieId").asString()), 
-                        record.get("title").asString(), Float.parseFloat(record.get("score").asString()));
+                Value val = record.get("m");
+                Movie rec = new Movie(Integer.parseInt(val.get("movieId").asString()), 
+                val.get("title").asString(), (float) 0.0);
                 recs.add(rec);
                 // Values can be extracted from a record by index or name.
                 //System.out.println(rec.getTitle() + ": " + record.get("score").asString());
@@ -111,12 +113,11 @@ public class MovieRecommender implements AutoCloseable
         {
             Result result = session.run(
                     "MATCH (p1:Movie {movieId: $mid})-[x:TAGGED_AS]->(movie)<-[x2:TAGGED_AS]-(p2:Movie)" +
-                    "WHERE p2 <> p1 and toFloat(x.relevance) > 0.5" +
-                    "WITH p1, p2, collect(toFLoat(x.relevance)) AS p1Relevance, collect(toFloat(x2.relevance)) AS p2Relevance" + 
-                    "RETURN p1.title AS from," +
-                           "p2.title AS to," +
+                    " WHERE p2 <> p1 and toFloat(x.relevance) > 0.5" +
+                    " WITH p1, p2, collect(toFLoat(x.relevance)) AS p1Relevance, collect(toFloat(x2.relevance)) AS p2Relevance" + 
+                    " RETURN p2," +
                            "gds.alpha.similarity.cosine(p1Relevance, p2Relevance) AS similarity" + 
-                    "ORDER BY similarity DESC",
+                    " ORDER BY similarity DESC LIMIT 10",
                     parameters("mid", Integer.toString(movie)));
 
             List<Movie> recs = new ArrayList<Movie>();
@@ -124,8 +125,9 @@ public class MovieRecommender implements AutoCloseable
             while (result.hasNext())
             {
                 Record record = result.next();
-                Movie rec = new Movie(Integer.parseInt(record.get("movieId").asString()), 
-                        record.get("title").asString(), Float.parseFloat(record.get("similarity").asString()));
+                Value val = record.get("p2");
+                Movie rec = new Movie(Integer.parseInt(val.get("movieId").asString()), 
+                val.get("title").asString(), (float) 0.0);
                 recs.add(rec);
                 //System.out.println(rec.getTitle() + ": " + record.get("similarity").asString());
             }
@@ -135,7 +137,7 @@ public class MovieRecommender implements AutoCloseable
     }
 
     // Find the movie by the given title and return a Movie object
-    private Movie findMovieByTitle(String title)
+    public Movie findMovieByTitle(String title)
     {
         try (Session session = driver.session())
         {
@@ -145,7 +147,8 @@ public class MovieRecommender implements AutoCloseable
             if (result.hasNext())
             {
                 Record record = result.next();
-                Movie rec = new Movie(Integer.parseInt(record.get("movieId").asString()), record.get("title").asString(), (float) 0.0);
+                Value val = record.get("m");
+                Movie rec = new Movie(Integer.parseInt(val.get("movieId").asString()), val.get("title").asString(), (float) 0.0);
                 //System.out.println(rec.getTitle());
                 return rec;
             }
@@ -154,11 +157,11 @@ public class MovieRecommender implements AutoCloseable
     }
 
     // Find the movie by the given movieId and return a Movie object
-    private Movie findMovieById(int mid)
+    public Movie findMovieById(int mid)
     {
         try (Session session = driver.session())
         {
-            Result result = session.run("MATCH (m:Movie {title:$x}) RETURN m",
+            Result result = session.run("MATCH (m:Movie {movieId:$x}) RETURN m",
                     parameters("x", Integer.toString(mid)));
 
             if (result.hasNext())
